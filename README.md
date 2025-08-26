@@ -1,165 +1,171 @@
-# (KDD 2025) BatteryLife
-This is the official repository for [BatteryLife: A Comprehensive Dataset and Benchmark for Battery Life Prediction](https://arxiv.org/abs/2502.18807). If you find this repository useful, we would appreciate citations to our paper and stars to this repository.
+# SDU Battery Data Preprocessor
 
-🔥**News** (2025.07) BatteryLife downloads exceed 7,000.
+A comprehensive battery data preprocessing tool designed to clean and standardize battery charge/discharge cycle data from CSV files. This preprocessor implements a sophisticated multi-stage filtering approach to remove outliers while preserving the integrity of normal battery cycling data.
 
-🔥**News** (2025.06) BatteryLife downloads exceed 5,000.
+## 🚀 Features
 
-🔥**News** (2025.06) BatteryLife downloads exceed 4,000.
+### Multi-Stage Outlier Detection
+- **Diagnostic Cycle Replacement**: Identifies and replaces diagnostic cycles (mean negative current ≈ -0.48A) with nearest normal cycle capacities
+- **Hard-coded Rules**: Applies specific, manually defined outlier removal rules for known problematic batteries
+- **Median-Window Filtering**: Uses 10-cycle non-overlapping windows with conservative thresholds to detect statistical outliers
 
-:triangular_flag_on_post:**News** (2025.06) Add the complete Stanford dataset as "Stanford_2" (now including both releases of the Stanford dataset).
+### Data Processing Pipeline
+- **Capacity Calculation**: Computes charge/discharge capacities using proven algorithms
+- **Cycle Organization**: Reorganizes cycle indices for consistency
+- **Quality Filtering**: Removes cycles with discharge capacity < 0.1 Ah
 
-:triangular_flag_on_post:**News** (2025.05) BatteryLife was accpeted by KDD 2025.
+### Comprehensive Statistics & Visualization
+- Tracks all filtering operations with detailed statistics
+- Generates side-by-side comparison plots showing before/after preprocessing
+- Annotates outlier removal points for visual validation
 
-🔥**News** (2025.05) BatteryLife downloads exceed 3,000. ​
-
-:triangular_flag_on_post:**News** (2025.02) BatteryLife was released!
-## Highlights
-- **The largest battery life dataset:** BatteryLife is created by integrating 16 datasets, providing 99,000 samples from 990 batteries with life labels. This is 2.5 times the size of BatteryML, which is the previous largest battery life resource.
-- **The most diverse battery life dataset:** BatteryLife contains 8 battery formats, 59 chemical systems, 9 operation temperatures, and 421 charge/discharge protocols. Compared with the previous largest battery life resource (BatteryML), BatteryLife furnishes 4 times format, 11.8 times chemical system, 1.8 times operating temperature, and 2.2 times charge/discharge protocol.
-- **A comprehensive benchmark for battery life prediction:** BatteryLife provides 18 benchmark methods with open-source codes in this repository. The 18 benchmark methods include popular methods for battery life prediction, popular baselines in time series analysis, and a series of baselines proposed by this work.
-
-## Data availability
-
-The processed datasets can be accessed via multiple ways:
-1. You can download the datasets from [Huggingface](https://huggingface.co/datasets/Hongwxx/BatteryLife_processed/tree/main) [[tutorial]](./assets/Data_download.md).
-2. You can download the datasets from [Zenodo](https://zenodo.org/records/15531867).
-   
-
-Note that brief introductions to each dataset are available under the directory of each dataset.
-
-All the raw datasets are publicly available, interested users can download them from the following links:
-- Zn-ion, Na-ion, and CALB datasets: [Zenodo link](https://zenodo.org/records/15013636) [Huggingface link](https://huggingface.co/datasets/Hongwxx/BatteryLife_Raw/tree/main) [[tutorial]](./assets/Data_download.md#how-to-download-the-raw-data-from-huggingface)
-- CALCE: [link](https://calce.umd.edu/battery-data)
-- MATR: [Three batches](https://data.matr.io/1/projects/5c48dd2bc625d700019f3204) and [Batch 9](https://data.matr.io/1/projects/5d80e633f405260001c0b60a/batches/5dcef1fe110002c7215b2c94)
-- HUST: [link](https://data.mendeley.com/datasets/nsc7hnsg4s/2)
-- RWTH: [link](https://publications.rwth-aachen.de/record/818642/files/Rawdata.zip)
-- ISU\_ILCC: [link](https://iastate.figshare.com/articles/dataset/_b_ISU-ILCC_Battery_Aging_Dataset_b_/22582234)
-- XJTU: [link](https://zenodo.org/records/10963339)
-- Tongji: [link](https://zenodo.org/records/6405084)
-- Stanford: [link](https://data.matr.io/8/)
-- HNEI, SNL, MICH, MICH_EXP and UL_PUR datasets: [BatteryArchive](https://www.batteryarchive.org/index.html).
-
-## Benchmark results of Battery Life Prediction(BLP) task
-
-The benchmark result for battery life prediction. The comparison methods are split into five types, including
-
-1. Dummy, a baseline that uses the mean of training labels as the prediction.
-2. MLPs, a series of multilayer perceptron models including DLinear, MLP, and CPMLP.
-3. Transformers, a series of transformer models including PatchTST, Autoformer, iTransformer, Transformer, and CPTransformer.
-4. CNNs, a series of convolutional neural network models including CNN and MICN.
-5. RNNs, a series of recurrent neural network models including CPGRU, CPBiGRU, CPLSTM, CPBiLSTM, GRU, BiGRU, LSTM, and BiLSTM.
-
-|   Datasets    |    Li-ion     |   Li-ion    |   Zn-ion    |   Zn-ion    |   Na-ion    |   Na-ion    |    CALB     |    CALB     |
-| :-----------: | :-----------: | :---------: | :---------: | :---------: | :---------: | :---------: | :---------: | :---------: |
-|  **Metrics**  |   **MAPE**    | **15%-Acc** |  **MAPE**   | **15%-Acc** |  **MAPE**   | **15%-Acc** |  **MAPE**   | **15%-Acc** |
-|     Dummy     |  0.831±0.000  | 0.296±0.000 | 1.297±0.214 | 0.083±0.047 | 0.404±0.029 | 0.067±0.094 | 1.811±0.550 | 0.267±0.094 |
-|    DLinear    |  0.586±0.028  | 0.275±0.017 | 0.814±0.026 | 0.124±0.020 | 0.319±0.031 | 0.329±0.042 | 0.164±0.049 | 0.601±0.114 |
-|      MLP      |  0.233±0.010  | 0.503±0.013 | 0.805±0.103 | 0.079±0.055 | 0.281±0.067 | 0.364±0.098 | 0.149±0.014 | 0.641±0.115 |
-|     CPMLP     |  0.179±0.003  | 0.620±0.004 | 0.558±0.034 | 0.297±0.084 | 0.274±0.026 | 0.337±0.038 | 0.140±0.009 | 0.704±0.053 |
-|   PatchTST    |  0.288±0.042  | 0.430±0.053 | 0.716±0.024 | 0.133±0.001 | 0.396±0.094 | 0.258±0.070 | 0.347±0.045 | 0.511±0.139 |
-|  Autoformer   |  0.437±0.093  | 0.287±0.067 | 0.987±0.243 | 0.106±0.039 | 0.372±0.047 | 0.177±0.128 | 0.761±0.061 | 0.329±0.121 |
-| iTransformer  | 0.209±0.015   | 0.516±0.028 | 0.690±0.110 | 0.188±0.037 | 0.321±0.087 | 0.249±0.178 | 0.164±0.020 | 0.649±0.044 |
-|  Transformer  |       -       |      -      |      -      |      -      |      -      |      -      |      -      |      -      |
-| CPTransformer |  0.184±0.003  | 0.573±0.016 | 0.515±0.067 | 0.202±0.084 | 0.255±0.036 | 0.406±0.084 | 0.149±0.005 | 0.672±0.107 |
-|      CNN      |  0.337±0.068  | 0.371±0.050 | 0.928±0.093 | 0.115±0.029 | 0.307±0.047 | 0.273±0.027 | 0.278±0.011 | 0.582±0.032 |
-|     MICN      |  0.249±0.004  | 0.494±0.019 | 0.579±0.101 | 0.227±0.127 | 0.305±0.040 | 0.335±0.065 | 0.233±0.050 | 0.471±0.257 |
-|     CPGRU     |  0.189±0.008  | 0.585±0.013 | 0.616±0.049 | 0.289±0.076 | 0.298±0.063 | 0.203±0.160 | 0.141±0.012 | 0.681±0.178 |
-|    CPBiGRU    |  0.190±0.001  | 0.566±0.034 | 0.774±0.202 | 0.193±0.156 | 0.282±0.055 | 0.395±0.008 | 0.160±0.015 | 0.686±0.063 |
-|    CPLSTM     |  0.196±0.006  | 0.585±0.020 | 0.932±0.227 | 0.085±0.028 | 0.272±0.051 | 0.386±0.009 | 0.156±0.073 | 0.613±0.153 |
-|   CPBiLSTM    |  0.191±0.007  | 0.421±0.255 | 0.645±0.049 | 0.150±0.104 | 0.299±0.043 | 0.399±0.001 | 0.173±0.075 | 0.663±0.247 |
-|   GRU&BiGRU   |      NA       |     NA      |     NA      |     NA      |     NA      |     NA      |     NA      |     NA      |
-|  LSTM&BiLSTM  |      NA       |     NA      |     NA      |     NA      |     NA      |     NA      |     NA      |     NA      |
-
-## Quick start
-
-### Install
+## 📁 Project Structure
 
 ```
-pip install -r requirements.txt
-# You should also install BatteryML (https://github.com/microsoft/BatteryML)
+├── process_scripts/
+│   └── preprocess_SDU.py              # Main preprocessor
+├── process_primary_use_phase.py       # Processing script
+├── plot_capacity_per_battery_comparison.py  # Visualization script
+├── plots/comparison_capacity_per_battery/   # Generated comparison plots
+│   ├── battery_1_capacity_comparison.png
+│   ├── battery_2_capacity_comparison.png
+│   └── ... (85 total plots)
+└── README.md                          # This file
 ```
 
-### Preprocessing [[tutorial](./assets/Preprocess.md)]
+## 🔧 Technical Details
 
-After downloading all raw datasets provided in "Data availability" section, you can run the following script to obtain the processed datasets:
-
-```
-python preprocess_scripts.py
-```
-If you download the processed datasets, you can skip this step.
-
-### Train the model [[tutorial](./assets/Model_training.md)]
-
-Before you start training, please move all **processed datasets (such as, HUST, MATR, et al.)** folders and **Life labels** folder (downloaded from Hugginface or Zenodo websites) into `./dataset` folder under the root folder.
-
-After that, just feel free to run any benchmark method. For example:
-
-```sh
-sh ./train_eval_scripts/CPTransformer.sh
+### Diagnostic Cycle Detection
+```python
+target_neg_current = -0.48
+tolerance_in_A = 0.03
+# Identifies cycles with mean negative current close to -0.48A
+# Replaces their discharge capacity with nearest normal cycle
 ```
 
-### Evaluate the model
+### Hard-coded Outlier Rules
+- **Battery 2**: Remove cycles with discharge capacity < 1.7 Ah
+- **Battery 11**: Remove cycles > 425 with capacity > 2.21 Ah
+- **Battery 17**: Remove cycles 200-250 with capacity < 2.4 Ah
+- **Battery 21**: Remove cycles 350-395 with capacity < 2.2 Ah
+- **Battery 46**: Remove lowest capacity cycle in range 200-240
+- **Battery 50**: Remove cycles 300-400 with capacity < 2.0 Ah, and cycles 900-1000 with capacity < 1.85 Ah
 
-If you want to evaluate a model in detail. We have provided the evaluation script. You can use it as follows:
+### Median-Window Filtering
+- **Window Size**: 10 cycles (non-overlapping)
+- **Thresholds**: Conservative settings to avoid removing normal cycles
+  - Absolute threshold: max(3.6 × MAD, 0.14)
+  - Relative threshold: 0.062 × median(window)
+  - Dominance ratio: ≥ 2.1
+  - Modified z-score: ≥ 3.6
+- **Output**: At most one outlier removed per 10-cycle window
 
-```sh
-sh ./train_eval_scripts/evaluate.sh
+## 🚀 Quick Start
+
+### Prerequisites
+```bash
+pip install numpy pandas scipy numba tqdm matplotlib seaborn
 ```
 
-### Fine-tuning [[tutorial](./assets/Transfer_learning.md#Fine-tuning)]
+### Basic Usage
+```python
+from process_scripts.preprocess_SDU import SDUPreprocessor
 
-If you want to fine-tune the pretrained model to another dataset. We have provided the fine-tuning script and the [tutorial](./assets/Transfer_learning.md#Fine-tuning). You can use it as follows:
+# Initialize preprocessor
+preprocessor = SDUPreprocessor(
+    output_dir="./processed_data",
+    silent=False
+)
 
-```shell
-sh ./train_eval_scripts/finetune_script.sh
+# Process CSV files
+processed_num, skipped_num = preprocessor.process(
+    parentdir="/path/to/csv/files"
+)
 ```
 
-### Domain adaptation [[tutorial](./assets/Transfer_learning.md#domain-adaptation)]
+### Command Line Usage
+```bash
+# Run preprocessing
+python process_primary_use_phase.py
 
-If you want to do the domain adaptation to another dataset. We have provided the domain adaptation script and the [tutorial](./assets/Transfer_learning.md#domain-adaptation). You can use it as follows:
-
-```shell
-sh ./train_eval_scripts/domain_adaptation_script.sh
+# Generate comparison plots
+python plot_capacity_per_battery_comparison.py
 ```
 
-## Documention
+## 📊 Input/Output Format
 
-The main information is described in our [BatteryLife paper](https://arxiv.org/abs/2502.18807). The data structure of the standardized data is described in [Data_structure_description.md](./assets/Data_structure_description.md). Further details of data statistics are available at [Further_details_of_data_statistics.md](./assets/Further_details_of_data_statistics.md).
+### Input Data Format
+CSV files with columns:
+- `Battery_ID`: Battery identifier
+- `Cycle_Index`: Cycle number
+- `Test_Time(s)`: Test time in seconds
+- `Current(A)`: Current in amperes
+- `Voltage(V)`: Voltage in volts
+- `Discharge_Capacity(Ah)`: Discharge capacity (optional, will be calculated)
 
-## Welcome contributions
+### Output Format
+- **Pickle files**: `SDU_Battery_{id}.pkl` containing `BatteryData` objects
+- **Metadata**: Includes outlier removal indices for analysis
+- **Statistics**: Comprehensive processing summaries
 
-Advancing AI4Battery requires standardized datasets. However, the available battery life datasets are typically stored in different places and in different formats. We have put great efforts into integrating 13 previously available datasets and 3 of our datasets. BatteryLife serves as a platform to share all kinds of standardized datasets. We warmly welcome contributions from the community to further enhance this collection by providing datasets standardized according to the BatteryLife standards.
+## 📈 Visualization
 
-If you are interested in contributing, please either submit a pull request or contact us via email at rtan474@connect.hkust-gz.edu.cn and whong719@connect.hkust-gz.edu.cn. To integrate your data into the BatteryLife repositories, please provide:
-- Raw datasets
-- Processed datasets
-- Preprocessing scripts (for reproducibility)
-- A list of contributors (for acknowledgment in the repo)
-- Papers related to the data generation (we will prompt users to cite these in the repository's Citation section).
+The comparison plots show:
+- **Left**: Raw capacity trajectories with outlier annotations
+  - Red 'x': Hard-coded outliers
+  - Red circles: Median-filtered outliers
+- **Right**: Processed capacity trajectories
+- **Text annotations**: Exact cycle indices of removed outliers
 
+## ⚙️ Configuration
 
-## Citation
-If you use the benchmark, processed datasets, or the raw datasets produced by this work, you should cite the BatteryLife paper:
+### Skipped Batteries
+Batteries 73, 74, and 75 are automatically skipped (no testing cycles).
 
-```
-@misc{tan2025batterylifecomprehensivedatasetbenchmark,
-      title={BatteryLife: A Comprehensive Dataset and Benchmark for Battery Life Prediction}, 
-      author={Ruifeng Tan and Weixiang Hong and Jiayue Tang and Xibin Lu and Ruijun Ma and Xiang Zheng and Jia Li and Jiaqiang Huang and Tong-Yi Zhang},
-      year={2025},
-      eprint={2502.18807},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2502.18807}, 
-}
-```
+### Battery Parameters
+- **Form factor**: Cylindrical
+- **Anode**: Graphite
+- **Cathode**: NMC_532
+- **Voltage limits**: 3.0V - 4.2V
+- **SOC interval**: [0, 1]
+- **Nominal capacity**: 2.4 Ah (primary use phase)
 
-- Additionally, please cite the original papers that conducted experiments. Please cite [BatteryArchive](https://www.batteryarchive.org/index.html) as the data source for the HNEI, SNL, MICH, MICH_EXP, and UL_PUR datasets.
-- Please cite [BatteryML](https://iclr.cc/virtual/2024/poster/17628) if you use the processed CALCE, MATR, HUST, HNEI, RWTH, SNL, and UL_PUR datasets. Our preprocessing for these 7 datasets relies heavily on BatteryML's preprocessing scripts.
+## 🔍 Quality Assurance
 
+### Validation Features
+- Comprehensive statistics tracking
+- Visual comparison plots with outlier annotations
+- Detailed logging of all filtering operations
+- Error handling for malformed data
 
-## Acknowledgement
-This repo is constructed based on the following repos:
-- https://github.com/thuml/Time-Series-Library
-- https://github.com/microsoft/BatteryML
+### Performance Optimizations
+- JIT compilation for critical functions
+- Memory-efficient file processing
+- Progress tracking for large datasets
+
+## 📋 Dependencies
+
+- `numpy`: Numerical computations
+- `pandas`: Data manipulation
+- `scipy.signal`: Median filtering
+- `numba`: JIT compilation for performance
+- `tqdm`: Progress bars
+- `matplotlib`: Plotting
+- `seaborn`: Enhanced plotting styles
+
+## 🤝 Contributing
+
+When modifying the preprocessor:
+1. Maintain the multi-stage filtering approach
+2. Update hard-coded rules with proper documentation
+3. Test with sample data before deployment
+4. Update statistics tracking for new filtering methods
+
+## 📄 License
+
+This project is part of the BatteryLife project and follows the same licensing terms.
+
+---
+
+**Note**: This preprocessor is specifically designed for SDU battery datasets and implements sophisticated outlier detection while preserving data integrity. The visualization tools provide comprehensive validation of the preprocessing effectiveness.
 
