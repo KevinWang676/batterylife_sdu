@@ -117,48 +117,6 @@ class SDUPreprocessor(BasePreprocessor):
                     print(f"No valid cycles found for battery {cell_name}")
                     continue
                 
-                # Identify and replace diagnostic cycles (skip for batteries 73, 74, 75)
-                diagnostic_replaced = 0
-                if not (isinstance(_bid, int) and _bid in {73, 74, 75}):
-                    # For each cycle, compute the mean of negative currents.
-                    # If the mean negative current is close to -0.48 A, mark as diagnostic.
-                    target_neg_current = -0.48
-                    tolerance_in_A = 0.03  # allow small deviation around -0.48 A
-
-                    diagnostic_mask = np.zeros(len(cycles), dtype=bool)
-                    for i, cyc in enumerate(cycles):
-                        I_arr = np.asarray(cyc.current_in_A, dtype=float)
-                        neg_I = I_arr[I_arr < 0]
-                        if neg_I.size == 0:
-                            continue
-                        mean_neg_I = float(np.mean(neg_I))
-                        if abs(mean_neg_I - target_neg_current) <= tolerance_in_A:
-                            diagnostic_mask[i] = True
-
-                    # Replace discharge capacity of diagnostic cycles with nearest normal cycle
-                    for i, is_diag in enumerate(diagnostic_mask):
-                        if not is_diag:
-                            continue
-                        neighbor_idx = None
-                        # search outward for nearest non-diagnostic cycle
-                        for off in range(1, len(cycles)):
-                            left = i - off
-                            if left >= 0 and not diagnostic_mask[left]:
-                                neighbor_idx = left
-                                break
-                            right = i + off
-                            if right < len(cycles) and not diagnostic_mask[right]:
-                                neighbor_idx = right
-                                break
-                        if neighbor_idx is not None:
-                            cycles[i].discharge_capacity_in_Ah = list(cycles[neighbor_idx].discharge_capacity_in_Ah)
-                            diagnostic_replaced += 1
-                        # if no neighbor found, leave as is
-
-                # Recompute Qd after potential replacements
-                Qd = []
-                for cycle_data in cycles:
-                    Qd.append(max(cycle_data.discharge_capacity_in_Ah) if len(cycle_data.discharge_capacity_in_Ah) > 0 else 0.0)
 
                 # Apply hard-coded outlier removal rules AFTER diagnostic replacement
                 hardcoded_remove_indices = set()
@@ -213,44 +171,7 @@ class SDUPreprocessor(BasePreprocessor):
                             if (600 <= ci <= 700) and (q < 2.0):
                                 hardcoded_remove_indices.add(i)
 
-                # Explicit exception: ensure cycle 951 of battery 50 is kept with exact capacity (1.898038 Ah)
-                if isinstance(_bid, int) and _bid == 50:
-                    idx_951 = 951 - 1
-                    if idx_951 in hardcoded_remove_indices:
-                        hardcoded_remove_indices.remove(idx_951)
-                        # Set exact discharge capacity value
-                        if idx_951 < len(cycles):
-                            cycles[idx_951].discharge_capacity_in_Ah = [1.898038]
-                            Qd[idx_951] = 1.898038
-                        if not self.silent:
-                            print(f"     - Exception applied: Restored cycle 951 for Battery 50 (capacity: 1.898038 Ah)")
-
-                # Explicit exceptions: ensure cycles 26 and 31 of battery 48 are kept with exact capacities
-                if isinstance(_bid, int) and _bid == 48:
-                    cycle_capacities = {26: 2.400905, 31: 2.390913}
-                    for _ci in (26, 31):
-                        _idx = _ci - 1
-                        if _idx in hardcoded_remove_indices:
-                            hardcoded_remove_indices.remove(_idx)
-                            # Set exact discharge capacity value
-                            if _idx < len(cycles):
-                                exact_capacity = cycle_capacities[_ci]
-                                cycles[_idx].discharge_capacity_in_Ah = [exact_capacity]
-                                Qd[_idx] = exact_capacity
-                            if not self.silent:
-                                print(f"     - Exception applied: Restored cycle {_ci} for Battery 48 (capacity: {cycle_capacities[_ci]:.6f} Ah)")
-
-                # Explicit exception: ensure cycle 156 of battery 51 is kept with exact capacity (2.297773 Ah)
-                if isinstance(_bid, int) and _bid == 51:
-                    idx_156 = 156 - 1
-                    if idx_156 in hardcoded_remove_indices:
-                        hardcoded_remove_indices.remove(idx_156)
-                        # Set exact discharge capacity value
-                        if idx_156 < len(cycles):
-                            cycles[idx_156].discharge_capacity_in_Ah = [2.297773]
-                            Qd[idx_156] = 2.297773
-                        if not self.silent:
-                            print(f"     - Exception applied: Restored cycle 156 for Battery 51 (capacity: 2.297773 Ah)")
+                
 
                 # Keep cycles excluding hard-coded removals; no median-window filter, no <0.1 Ah filter
                 hardcoded_removed_count = 0
@@ -266,6 +187,43 @@ class SDUPreprocessor(BasePreprocessor):
                     cycles[i].cycle_number = index
                     clean_cycles.append(cycles[i])
                     final_cycles_count += 1
+                
+                # After hard-coded removals, identify and replace diagnostic cycles (skip for batteries 73, 74, 75)
+                diagnostic_replaced = 0
+                if not (isinstance(_bid, int) and _bid in {73, 74, 75}):
+                    # For each cycle, compute the mean of negative currents.
+                    # If the mean negative current is close to -0.48 A, mark as diagnostic.
+                    target_neg_current = -0.48
+                    tolerance_in_A = 0.03  # allow small deviation around -0.48 A
+
+                    diagnostic_mask = np.zeros(len(clean_cycles), dtype=bool)
+                    for i, cyc in enumerate(clean_cycles):
+                        I_arr = np.asarray(cyc.current_in_A, dtype=float)
+                        neg_I = I_arr[I_arr < 0]
+                        if neg_I.size == 0:
+                            continue
+                        mean_neg_I = float(np.mean(neg_I))
+                        if abs(mean_neg_I - target_neg_current) <= tolerance_in_A:
+                            diagnostic_mask[i] = True
+
+                    # Replace discharge capacity of diagnostic cycles with nearest normal cycle
+                    for i, is_diag in enumerate(diagnostic_mask):
+                        if not is_diag:
+                            continue
+                        neighbor_idx = None
+                        # search outward for nearest non-diagnostic cycle
+                        for off in range(1, len(clean_cycles)):
+                            left = i - off
+                            if left >= 0 and not diagnostic_mask[left]:
+                                neighbor_idx = left
+                                break
+                            right = i + off
+                            if right < len(clean_cycles) and not diagnostic_mask[right]:
+                                neighbor_idx = right
+                                break
+                        if neighbor_idx is not None:
+                            clean_cycles[i].discharge_capacity_in_Ah = list(clean_cycles[neighbor_idx].discharge_capacity_in_Ah)
+                            diagnostic_replaced += 1
                 
                 # Update global statistics
                 total_outliers_removed += diagnostic_replaced
