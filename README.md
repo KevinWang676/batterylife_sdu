@@ -10,6 +10,8 @@ The preprocessing pipeline transforms raw CSV battery cycling data into structur
 - **Hard-coded Outlier Removal**: Applies battery-specific filtering rules to remove anomalous cycles
 - **Standardized Data Format**: Outputs data in a consistent format compatible with the BatteryML framework
 
+Outliers removal plots: https://docs.google.com/presentation/d/1JO6gIbKDEIW7drJZjJmtraH-c-HtvXriridjuM5T4JU/edit?usp=sharing
+
 ## Preprocessing Pipeline
 
 ### 1. Data Loading and Initial Processing
