@@ -1,171 +1,143 @@
-# SDU Battery Data Preprocessor
+# BatteryLife SDU Dataset Preprocessing
 
-A comprehensive battery data preprocessing tool designed to clean and standardize battery charge/discharge cycle data from CSV files. This preprocessor implements a sophisticated multi-stage filtering approach to remove outliers while preserving the integrity of normal battery cycling data.
+This repository contains the preprocessing pipeline for the SDU (Stanford University) battery dataset, which processes raw battery cycling data into clean, standardized formats for machine learning applications.
 
-## 🚀 Features
+## Overview
 
-### Multi-Stage Outlier Detection
-- **Diagnostic Cycle Replacement**: Identifies and replaces diagnostic cycles (mean negative current ≈ -0.48A) with nearest normal cycle capacities
-- **Hard-coded Rules**: Applies specific, manually defined outlier removal rules for known problematic batteries
-- **Median-Window Filtering**: Uses 10-cycle non-overlapping windows with conservative thresholds to detect statistical outliers
+The preprocessing pipeline transforms raw CSV battery cycling data into structured `BatteryData` objects with the following key features:
 
-### Data Processing Pipeline
-- **Capacity Calculation**: Computes charge/discharge capacities using proven algorithms
-- **Cycle Organization**: Reorganizes cycle indices for consistency
-- **Quality Filtering**: Removes cycles with discharge capacity < 0.1 Ah
+- **Diagnostic Cycle Detection and Replacement**: Identifies and replaces diagnostic cycles based on current profiles
+- **Hard-coded Outlier Removal**: Applies battery-specific filtering rules to remove anomalous cycles
+- **Standardized Data Format**: Outputs data in a consistent format compatible with the BatteryML framework
 
-### Comprehensive Statistics & Visualization
-- Tracks all filtering operations with detailed statistics
-- Generates side-by-side comparison plots showing before/after preprocessing
-- Annotates outlier removal points for visual validation
+## Preprocessing Pipeline
 
-## 📁 Project Structure
+### 1. Data Loading and Initial Processing
 
-```
-├── process_scripts/
-│   └── preprocess_SDU.py              # Main preprocessor
-├── process_primary_use_phase.py       # Processing script
-├── plot_capacity_per_battery_comparison.py  # Visualization script
-├── plots/comparison_capacity_per_battery/   # Generated comparison plots
-│   ├── battery_1_capacity_comparison.png
-│   ├── battery_2_capacity_comparison.png
-│   └── ... (85 total plots)
-└── README.md                          # This file
-```
+- Loads CSV files containing battery cycling data
+- Groups data by `Battery_ID` to handle multiple batteries per file
+- Sorts data by `Test_Time(s)` for chronological ordering
+- Organizes cycle indices using the `organize_cycle_index()` function
+- Extracts required columns: `date`, `Cycle_Index`, `Test_Time(s)`, `Current(A)`, `Voltage(V)`
 
-## 🔧 Technical Details
+### 2. Capacity Calculation
 
-### Diagnostic Cycle Detection
+Uses the `calc_Q()` function to calculate charge and discharge capacities:
+- **Charge Capacity**: Accumulates positive current over time
+- **Discharge Capacity**: Accumulates negative current over time
+- Time integration with conversion to Ampere-hours (Ah)
+
+### 3. Diagnostic Cycle Detection and Replacement
+
+**Detection Method:**
+- Analyzes each cycle's current profile
+- Computes mean negative current during discharge phases
+- Identifies diagnostic cycles where mean negative current ≈ -0.48 A (±0.03 A tolerance)
+
+**Replacement Strategy:**
+- For each diagnostic cycle, finds the nearest non-diagnostic cycle
+- Replaces discharge capacity with the neighbor's capacity values
+- Searches outward in both directions (left and right) to find the closest normal cycle
+
+**Special Handling:**
+- **Batteries 73, 74, 75**: Diagnostic cycle replacement is **SKIPPED** for these batteries
+- These batteries are processed without diagnostic cycle filtering
+
+### 4. Hard-coded Outlier Removal
+
+Applies battery-specific filtering rules to remove anomalous cycles based on cycle index ranges and capacity thresholds:
+
+#### Battery-Specific Rules:
+
+- **Battery 2**: Removes cycles > 800 with capacity < 1.7 Ah
+- **Battery 11**: Removes cycles 440-500 with capacity > 2.22 Ah
+- **Battery 17**: Removes cycles 200-250 with capacity < 2.4 Ah
+- **Battery 48**: Removes cycles 1-100 with capacity < 2.0 Ah
+- **Battery 50**: Removes cycles 200-400 with capacity < 2.0 Ah, cycles 900-1000 with capacity < 1.825 Ah
+- **Battery 51**: Removes cycles 100-220 with capacity < 2.23 Ah, cycles 200-220 with capacity > 2.37 Ah
+- **Battery 65**: Removes cycles > 210 with capacity > 2.11 Ah
+- **Battery 73**: Removes cycles 600-650 with capacity < 2.1 Ah
+- **Battery 74**: Removes cycles 650-700 with capacity < 2.24 Ah
+- **Battery 75**: Removes cycles 100-150 with capacity < 2.355 Ah
+- **Battery 76**: Removes cycles 900-990 with capacity < 1.982 Ah
+- **Battery 80**: Removes cycles 450-540 with capacity < 2.22 Ah
+- **Battery 82**: Removes cycles 490-540 with capacity < 2.245 Ah
+- **Battery 83**: Removes cycles 600-700 with capacity < 2.0 Ah
+
+#### Special Exceptions:
+
+Certain cycles are explicitly preserved with exact capacity values:
+- **Battery 48, Cycle 26**: 2.400905 Ah
+- **Battery 48, Cycle 31**: 2.390913 Ah
+- **Battery 50, Cycle 951**: 1.898038 Ah
+- **Battery 51, Cycle 156**: 2.297773 Ah
+
+### 5. Final Data Structure
+
+Each processed battery is stored as a `BatteryData` object with:
+- **Cell ID**: `SDU_Battery_{id}`
+- **Form Factor**: Cylindrical
+- **Materials**: Graphite anode, NMC_532 cathode
+- **Nominal Capacity**: 2.4 Ah (primary use phase)
+- **Voltage Limits**: 3.0V - 4.2V
+- **SOC Interval**: [0, 1]
+- **Cycle Data**: Cleaned cycle information with voltage, current, time, and capacity data
+- **Removal Tracking**: Lists of hard-coded and median-filtered removed cycle indices
+
+## Key Features
+
+### Diagnostic Cycle Handling
+- **Automatic Detection**: Uses current profile analysis to identify diagnostic cycles
+- **Smart Replacement**: Replaces with nearest neighbor capacity values
+- **Selective Application**: Skips diagnostic processing for batteries 73, 74, 75
+
+### Outlier Management
+- **Battery-Specific Rules**: Custom filtering criteria for each battery
+- **Cycle Range Targeting**: Removes outliers in specific cycle index windows
+- **Capacity Thresholds**: Uses capacity-based filtering criteria
+- **Exception Handling**: Preserves specific cycles with exact capacity values
+
+### Data Quality Assurance
+- **Comprehensive Statistics**: Tracks raw cycles, diagnostic replacements, hard-coded removals, and final cycles
+- **Transparency**: Maintains lists of removed cycle indices for audit purposes
+- **Consistency**: Standardized output format across all batteries
+
+## Usage
+
+The preprocessing is implemented as a `SDUPreprocessor` class that can be used with the BatteryML framework:
+
 ```python
-target_neg_current = -0.48
-tolerance_in_A = 0.03
-# Identifies cycles with mean negative current close to -0.48A
-# Replaces their discharge capacity with nearest normal cycle
+from batteryml.preprocess import SDUPreprocessor
+
+preprocessor = SDUPreprocessor()
+processed_batteries = preprocessor.process("path/to/raw/csv/files")
 ```
 
-### Hard-coded Outlier Rules
-- **Battery 2**: Remove cycles with discharge capacity < 1.7 Ah
-- **Battery 11**: Remove cycles > 425 with capacity > 2.21 Ah
-- **Battery 17**: Remove cycles 200-250 with capacity < 2.4 Ah
-- **Battery 21**: Remove cycles 350-395 with capacity < 2.2 Ah
-- **Battery 46**: Remove lowest capacity cycle in range 200-240
-- **Battery 50**: Remove cycles 300-400 with capacity < 2.0 Ah, and cycles 900-1000 with capacity < 1.85 Ah
+## Output Statistics
 
-### Median-Window Filtering
-- **Window Size**: 10 cycles (non-overlapping)
-- **Thresholds**: Conservative settings to avoid removing normal cycles
-  - Absolute threshold: max(3.6 × MAD, 0.14)
-  - Relative threshold: 0.062 × median(window)
-  - Dominance ratio: ≥ 2.1
-  - Modified z-score: ≥ 3.6
-- **Output**: At most one outlier removed per 10-cycle window
+The preprocessing pipeline provides detailed statistics:
+- Total raw cycles processed
+- Number of diagnostic cycles replaced
+- Number of hard-coded outliers removed
+- Final clean cycles retained
+- Percentage breakdowns for each category
 
-## 🚀 Quick Start
+## File Structure
 
-### Prerequisites
-```bash
-pip install numpy pandas scipy numba tqdm matplotlib seaborn
-```
+- `process_scripts/preprocess_SDU.py`: Original preprocessing script (diagnostic cycles only)
+- `process_scripts/preprocess_SDU2.py`: Enhanced preprocessing script (diagnostic + hard-coded filtering)
+- `plots/comparison_capacity_per_battery/`: Visualization plots showing before/after preprocessing
+- Processed data files in pickle format for each battery
 
-### Basic Usage
-```python
-from process_scripts.preprocess_SDU import SDUPreprocessor
-
-# Initialize preprocessor
-preprocessor = SDUPreprocessor(
-    output_dir="./processed_data",
-    silent=False
-)
-
-# Process CSV files
-processed_num, skipped_num = preprocessor.process(
-    parentdir="/path/to/csv/files"
-)
-```
-
-### Command Line Usage
-```bash
-# Run preprocessing
-python process_primary_use_phase.py
-
-# Generate comparison plots
-python plot_capacity_per_battery_comparison.py
-```
-
-## 📊 Input/Output Format
-
-### Input Data Format
-CSV files with columns:
-- `Battery_ID`: Battery identifier
-- `Cycle_Index`: Cycle number
-- `Test_Time(s)`: Test time in seconds
-- `Current(A)`: Current in amperes
-- `Voltage(V)`: Voltage in volts
-- `Discharge_Capacity(Ah)`: Discharge capacity (optional, will be calculated)
-
-### Output Format
-- **Pickle files**: `SDU_Battery_{id}.pkl` containing `BatteryData` objects
-- **Metadata**: Includes outlier removal indices for analysis
-- **Statistics**: Comprehensive processing summaries
-
-## 📈 Visualization
-
-The comparison plots show:
-- **Left**: Raw capacity trajectories with outlier annotations
-  - Red 'x': Hard-coded outliers
-  - Red circles: Median-filtered outliers
-- **Right**: Processed capacity trajectories
-- **Text annotations**: Exact cycle indices of removed outliers
-
-## ⚙️ Configuration
-
-### Skipped Batteries
-Batteries 73, 74, and 75 are automatically skipped (no testing cycles).
-
-### Battery Parameters
-- **Form factor**: Cylindrical
-- **Anode**: Graphite
-- **Cathode**: NMC_532
-- **Voltage limits**: 3.0V - 4.2V
-- **SOC interval**: [0, 1]
-- **Nominal capacity**: 2.4 Ah (primary use phase)
-
-## 🔍 Quality Assurance
-
-### Validation Features
-- Comprehensive statistics tracking
-- Visual comparison plots with outlier annotations
-- Detailed logging of all filtering operations
-- Error handling for malformed data
-
-### Performance Optimizations
-- JIT compilation for critical functions
-- Memory-efficient file processing
-- Progress tracking for large datasets
-
-## 📋 Dependencies
+## Dependencies
 
 - `numpy`: Numerical computations
 - `pandas`: Data manipulation
-- `scipy.signal`: Median filtering
 - `numba`: JIT compilation for performance
-- `tqdm`: Progress bars
-- `matplotlib`: Plotting
-- `seaborn`: Enhanced plotting styles
+- `tqdm`: Progress tracking
+- `batteryml`: Battery data framework
 
-## 🤝 Contributing
+## License
 
-When modifying the preprocessor:
-1. Maintain the multi-stage filtering approach
-2. Update hard-coded rules with proper documentation
-3. Test with sample data before deployment
-4. Update statistics tracking for new filtering methods
-
-## 📄 License
-
-This project is part of the BatteryLife project and follows the same licensing terms.
-
----
-
-**Note**: This preprocessor is specifically designed for SDU battery datasets and implements sophisticated outlier detection while preserving data integrity. The visualization tools provide comprehensive validation of the preprocessing effectiveness.
+Licensed under the MIT License. Copyright (c) Microsoft Corporation.
 
