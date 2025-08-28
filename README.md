@@ -124,9 +124,9 @@ The preprocessing pipeline provides detailed statistics:
 
 ## File Structure
 
-- `process_scripts/preprocess_SDU.py`: Original preprocessing script (diagnostic cycles only)
-- `process_scripts/preprocess_SDU2.py`: Enhanced preprocessing script (diagnostic + hard-coded filtering)
-- `plots/comparison_capacity_per_battery/`: Visualization plots showing before/after preprocessing
+- `process_scripts/process_SDU.py`: Enhanced preprocessing script (diagnostic + hard-coded filtering)
+- `process_scripts/process_SDU_only_remove_diagnostic_cycles.py`: Original preprocessing script (removing and replacing diagnostic cycles only)
+- `comparison_capacity_per_battery_08_28/`: Visualization plots showing before/after preprocessing
 - Processed data files in pickle format for each battery
 
 ## Dependencies
